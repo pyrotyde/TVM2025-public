@@ -70,7 +70,7 @@ export function parseExpr(source: string): Expr
 {
     const m: MatchResult = arithGrammar.match(source);
     if (m.failed()) {
-        throw new Error("Parse error");
+        throw new SyntaxError("Parse error");
     }
     return semantics(m).parse();
 }
