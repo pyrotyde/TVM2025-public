@@ -1,3 +1,24 @@
 Arithmetic {
-    // write rules here
+    //Левоассоциативные правила
+    // Expr = AddExpr
+    // AddExpr = AddExpr ("+" | "-") MulExpr	-- add
+    //          | MulExpr
+    // MulExpr = MulExpr ("*" | "/")  ParExpr	-- mult
+    // 	     | ParExpr
+    // ParExpr = "(" Expr")" 		-- pars
+    //          | number
+    //          | variable
+    //          | "-" Expr -- parUnary
+    // number = digit+
+    // variable = letter (digit | letter)*
+
+    Expr = AddExpr
+    AddExpr = MulExpr (("+" | "-") MulExpr)* -- add
+    MulExpr = ParExpr (("*" | "/") ParExpr)* -- mult
+    ParExpr = "(" Expr ")" -- pars
+            | number	
+            | variable 
+            | "-" ParExpr -- parUnary
+  	number = digit+
+    variable = letter (digit | letter)*
 }
