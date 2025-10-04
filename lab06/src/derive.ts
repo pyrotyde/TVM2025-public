@@ -1,38 +1,52 @@
 import { Expr } from "../../lab04";
 
+function add(left: Expr, right: Expr) : Expr { return {kind: "add", left: left, right: right}; }
+
+function sub(left: Expr, right: Expr) : Expr { return {kind: "sub", left: left, right: right}; }
+
+function mul(left: Expr, right: Expr) : Expr { return {kind: "mul", left: left, right: right}; }
+
+function div(left: Expr, right: Expr) : Expr { return {kind: "div", left: left, right: right}; }
+
+function varExp(name: string) : Expr { return {kind: "var", name: name}; }
+
+function num(value: number) : Expr { return {kind: "num", value: value}; }
+
+function neg(expr: Expr) : Expr { return {kind: "neg", expr: expr}};
+
 export function derive(e: Expr, varName: string): Expr
 {   
     let result : Expr;
     switch (e.kind) {
         case ("add") :
-            result = {kind: "add", left: derive(e.left, varName), right: derive(e.right, varName)};
+            result = add(derive(e.left, varName), derive(e.right, varName));
             break;
         case ("sub"):
-            result ={kind: "sub", left: derive(e.left, varName), right: derive(e.right, varName)};
+            result = sub(derive(e.left, varName), derive(e.right, varName));
             break;
         case ("mul") :
-            let gdf : Expr = {kind: "mul", left: derive(e.left, varName), right: e.right};
-            let fdg : Expr = {kind: "mul", left: e.left, right: derive(e.right, varName)};
-            result = {kind: "add", left: gdf, right: fdg};
+            let gdf : Expr =  mul(derive(e.left, varName), e.right);
+            let fdg : Expr = mul(e.left, derive(e.right, varName))
+            result = add(gdf, fdg);
             break;
         case ("div") :
-            let numleft : Expr = {kind: "mul", left: derive(e.left, varName), right: e.right};
-            let numright : Expr = {kind: "mul", left: derive(e.right, varName), right: e.left};
-            let denom : Expr = {kind: "mul", left: e.right, right: e.right};
-            let numerator : Expr = {kind: "sub", left: numleft, right: numright};
-            result = {kind: "div", left: numerator, right: denom};
+            let numleft : Expr = mul(derive(e.left, varName), e.right);
+            let numright : Expr = mul(derive(e.right, varName), e.left);
+            let denom : Expr = mul(e.right, e.right);
+            let numerator : Expr = sub(numleft, numright);
+            result = div(numerator, denom);
             break;
         case ("neg") :
-            result = {kind: "neg", expr: derive(e.expr, varName)};
+            result = neg(derive(e.expr, varName));
             break;
         case ("num") :
-            result = {kind: "num", value: 0};
+            result = num(0);
             break;
         case ("var") :
             if (e.name == varName) {
-                result =  {kind: "num", value: 1};
+                result =  num(1);
             } else {
-                result =  {kind: "num", value: 0};
+                result = num(0);
             }
             break;
     }
@@ -56,44 +70,44 @@ function simplify(e: Expr): Expr {
             return e;
         case "neg": {
             const inner = simplify(e.expr); 
-            if (inner.kind === "num" && inner.value === 0) return { kind: "num", value: 0 };
-            if (inner.kind === "neg") return inner.expr;
-            return { kind: "neg", expr: inner };
+            if (isZero(inner)) return num(0);   // -0 = 0
+            if (inner.kind === "neg") return inner.expr;    // --x = x
+            return neg(inner);
         }
         case "add": {
             const left = simplify(e.left);
             const right = simplify(e.right);
-            if (isZero(left)) return right;
+            if (isZero(left)) return right; // 0 + x = x + 0 = x
             if (isZero(right)) return left;
-            return { kind: "add", left, right };
+            return add(left, right);
         }
         case "sub": {
             const left = simplify(e.left);
             const right = simplify(e.right);
-            if (isZero(right)) return left;
+            if (isZero(right)) return left; // x - 0 = x
             if (isZero(left)) {
-                if (right.kind == "neg") return right.expr;                
-                return simplify({ kind: "neg", expr: right });
+                if (right.kind == "neg") return right.expr; // 0 - (-x) = x            
+                return simplify(neg(right));
             }
-            if (right.kind === "neg") return {kind: "add", left: left, right: right.expr};
-            return { kind: "sub", left, right };
+            if (right.kind === "neg") return add(left, right.expr); // x - (-y) = x + y
+            return sub(left, right);
         }
         case "mul": {
             const left = simplify(e.left);
             const right = simplify(e.right);
-            if (isZero(left) || isZero(right)) return { kind: "num", value: 0 };
-            if (isOne(left)) return right;
+            if (isZero(left) || isZero(right)) return num(0);    // 0 * x = x * 0 = 0
+            if (isOne(left)) return right;  // 1 * x = x * 1 = x
             if (isOne(right)) return left;
-            return { kind: "mul", left, right };
+            return mul(left, right);
         }
         case "div": {
             const left = simplify(e.left);
             const right = simplify(e.right);
-            if (isOne(right)) return left;
-            if (isZero(left)) return { kind: "num", value: 0 };
-            if (left.kind === "neg") return { kind: "neg", expr: {kind: "div", left: left.expr, right: right}};
-            if (right.kind === "neg") return { kind: "neg", expr: {kind: "div", left: left, right: right.expr}};
-            return { kind: "div", left, right };
+            if (isOne(right)) return left;  // x / 1 = x
+            if (isZero(left)) return { kind: "num", value: 0 }; // 0 / x = 0
+            if (left.kind === "neg") return  neg(div(left.expr, right)); // (-x)/y = x/(-y) = -(x/y)
+            if (right.kind === "neg") return neg(div(left, right.expr));
+            return div(left, right);
         }
     }
 }
